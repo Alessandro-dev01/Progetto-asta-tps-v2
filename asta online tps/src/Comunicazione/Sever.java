@@ -1,4 +1,4 @@
 package Comunicazione;
 
-public class Prodotto {
+public class Sever {
 }
