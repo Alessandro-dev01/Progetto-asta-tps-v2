@@ -1,4 +1,4 @@
-package Comunicazione;
+package Comunicazione.server;
 
 import java.io.IOException;
 import java.net.ServerSocket;
