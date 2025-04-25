@@ -1,4 +1,5 @@
 package Comunicazione.client;
+
 import Comunicazione.messagges.*;
 import StrutturaOggetti.Prodotto;
 import com.google.gson.Gson;
@@ -7,6 +8,7 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.LinkedList;
+
 import java.util.Scanner;
 
 public class Client {
@@ -21,6 +23,7 @@ public class Client {
     private PrintWriter output;
 
         public Client(){
+
 
            try {
                 this.clientTcp=new Socket(InetAddress.getByName("127.0.0.1"),5000);
@@ -38,7 +41,6 @@ public class Client {
             }
 
            this.th=new ThreadClientMulticast(25001);
-
         }
 
         public void avvio(){
@@ -49,6 +51,8 @@ public class Client {
             Gson data=new Gson();
             String mes="";
             int operation=-1;
+          
+
             String reply = "";
 
             do{
@@ -116,6 +120,7 @@ public class Client {
                     }
                 }
             } while (true);
+
 
         }
 

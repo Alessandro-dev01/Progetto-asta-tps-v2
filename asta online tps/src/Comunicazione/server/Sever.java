@@ -11,16 +11,21 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class Sever {
 
+
     //dati connessione db
+
     private String DB_URL = "jdbc:mysql://127.0.0.1/asteOnline";
     private String password = "";
     private String user = "root";
+
 
     // dati connessione client
     private ServerSocket serverSocket;
@@ -33,6 +38,8 @@ public class Sever {
         //connessione per scambio dati prodotti con il client
         try {
             this.serverSocket = new ServerSocket(5000);
+
+   
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -44,6 +51,7 @@ public class Sever {
             //fare inoltro messaggio d'errore tramite xml al client
             System.out.println("errore con la connessione al server");
         }
+
 
         this.converter=new Gson();
 
@@ -119,5 +127,6 @@ public class Sever {
         Sever server=new Sever();
 
         server.avvioServer();
+
     }
 }
