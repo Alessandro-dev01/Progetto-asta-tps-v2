@@ -1,14 +1,12 @@
 package Comunicazione.client;
-import Comunicazione.messagges.Login;
+import Comunicazione.messagges.*;
 import StrutturaOggetti.Prodotto;
 import com.google.gson.Gson;
 
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.LinkedList;
-import java.io.BufferedReader;
-import java.io.PrintWriter;
 import java.util.Scanner;
 
 public class Client {
@@ -24,22 +22,22 @@ public class Client {
 
         public Client(){
 
-//            try {
-//                this.clientTcp=new Socket(InetAddress.getByName("127.0.0.1"),12121);
-//            } catch (IOException e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//
-//            try {
-//                this.input=new BufferedReader(new InputStreamReader(this.clientTcp.getInputStream()));
-//
-//                this.output=new PrintWriter(this.clientTcp.getOutputStream(),true);
-//            } catch (IOException e) {
-//                throw new RuntimeException(e);
-//            }
-//
-//            this.th=new ThreadClientMulticast(25001);
+           try {
+                this.clientTcp=new Socket(InetAddress.getByName("127.0.0.1"),5000);
+           } catch (IOException e) {
+                throw new RuntimeException(e);
+          }
+
+
+            try {
+                this.input=new BufferedReader(new InputStreamReader(this.clientTcp.getInputStream()));
+
+               this.output=new PrintWriter(this.clientTcp.getOutputStream(),true);
+         } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+           this.th=new ThreadClientMulticast(25001);
 
         }
 
@@ -51,35 +49,73 @@ public class Client {
             Gson data=new Gson();
             String mes="";
             int operation=-1;
-
-            System.out.println("si richiede di inserire il nome utente");
-            username=scanner.nextLine();
-
-            System.out.println("si richiede di inserire la password");
-            password=scanner.nextLine();
-            mes=data.toJson(new Login(username,password));
-
-
+            String reply = "";
 
             do{
-                System.out.println("inserisci 1 per stampare la stringa json");
-                operation=scanner.nextInt();
+                try {
+
+                        reply=this.input.readLine();
+
+                        System.out.println(reply);
+
+                        if (reply.contains("loginRequest")){
+                            operation=1;
+                        } else if (reply.contains("loginResponse")) {
+                            operation=2;
+                        }
+
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
                 switch (operation){
+
                     case 1:{
-                        System.out.println(mes);
 
-                        Login p=data.fromJson(mes,Login.class);
+                        System.out.println("si richiede di inserire il nome utente");
+                        username=scanner.nextLine();
 
-                        System.out.println(p.toString());
+                        System.out.println("si richiede di inserire la password");
+                        password=scanner.nextLine();
+                        mes=data.toJson(new Login(username,password));
+
+                        output.println(mes);
+
+
+
                         break;
                     }
-                    case 2:
+                    case 2:{
+
+                        LoginResponse l=data.fromJson(mes,LoginResponse.class);
+
+
+                        if (l.getEsito().contains("erroreLogin")){
+                            System.out.println("login non effetuato, dati errati");
+
+                            LoginResult err=new LoginResult();
+
+                            String StringErr=data.toJson(err);
+
+                            output.println(StringErr);
+
+                        }
+                        else {
+                            System.out.println("login riuscito");
+
+                            LoginResult err=new LoginResult();
+
+                            err.setResult(Result.autorizzato);
+
+                            String StringErr=data.toJson(err);
+
+                            output.println(StringErr);
+                        }
+
+                        break;
+                    }
                 }
             } while (true);
-
-
-
-
 
         }
 

@@ -1,10 +1,12 @@
 package Comunicazione.messagges;
 
 public class Login {
+    private TypeOfMes type;
     private String username;
     private String password;
 
     public Login(String username, String password) {
+        this.type=TypeOfMes.login;
         this.username = username;
         this.password = password;
     }
@@ -28,7 +30,8 @@ public class Login {
     @Override
     public String toString() {
         return "Login{" +
-                "username='" + username + '\'' +
+                "type=" + type +
+                ", username='" + username + '\'' +
                 ", password='" + password + '\'' +
                 '}';
     }
