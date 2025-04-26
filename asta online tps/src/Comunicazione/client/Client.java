@@ -1,9 +1,8 @@
 package Comunicazione.client;
 
 import Comunicazione.messagges.*;
-import Comunicazione.messagges.login.Login;
-import Comunicazione.messagges.login.LoginResponse;
-import Comunicazione.messagges.login.LoginResult;
+import Comunicazione.messagges.dataUser;
+import Comunicazione.messagges.Response;
 import StrutturaOggetti.Prodotto;
 import com.google.gson.Gson;
 
@@ -24,7 +23,7 @@ public class Client {
     private ThreadClientMulticast th;
     private BufferedReader input;
     private PrintWriter output;
-
+    private Gson converter;
         public Client(){
 
 
@@ -44,32 +43,68 @@ public class Client {
             }
 
            this.th=new ThreadClientMulticast(25001);
+
+            this.converter=new Gson();
         }
 
         public void avvio(){
 
             //this.th.start();
             Scanner scanner=new Scanner(System.in);
-            String username =" " , password=" ";
-            Gson data=new Gson();
+
+
             String mes="";
+            int  menu=-1;
+
+            System.out.println(
+                    "inserisci un delle seguenti opzione: " +
+                            "1)login, " +"\n"+
+                            "2)registrazione" +"\n"+
+                    "3)carica oggetti posseduti  "+"\n" +
+                            "4)partecipa pasta"
+            );
+            menu=scanner.nextInt();
+
+
+            switch (menu){
+                case 1:{
+                        login();
+                    break;
+                }
+            }
+
+
+
+        }
+
+        public void login(){
+            Gson data=new Gson();
+            Request re=new Request();
             int operation=-1;
-          
+            Scanner scanner=new Scanner(System.in);
+            String username =" " , password=" ",mes="";
+
+            re.setType(TypeOfMes.loginRequest);
+
+            String req=this.converter.toJson(re);
+
+            this.output.println(re);
+
 
             String reply = "";
 
             do{
                 try {
 
-                        reply=this.input.readLine();
+                    reply=this.input.readLine();
 
-                        System.out.println(reply);
+                    System.out.println(reply);
 
-                        if (reply.contains("loginRequest")){
-                            operation=1;
-                        } else if (reply.contains("loginResponse")) {
-                            operation=2;
-                        }
+                    if (reply.contains("loginRequest")){
+                        operation=1;
+                    } else if (reply.contains("loginResponse")) {
+                        operation=2;
+                    }
 
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -84,7 +119,7 @@ public class Client {
 
                         System.out.println("si richiede di inserire la password");
                         password=scanner.nextLine();
-                        mes=data.toJson(new Login(username,password));
+                        mes=data.toJson(new dataUser(username,password));
 
                         output.println(mes);
 
@@ -94,13 +129,15 @@ public class Client {
                     }
                     case 2:{
 
-                        LoginResponse l=data.fromJson(mes,LoginResponse.class);
+                        Response l=data.fromJson(mes, Response.class);
 
 
                         if (l.getEsito().contains("erroreLogin")){
                             System.out.println("login non effetuato, dati errati");
 
-                            LoginResult err=new LoginResult();
+                            Request err=new Request();
+
+                            err.setType(TypeOfMes.loginRequest);
 
                             String StringErr=data.toJson(err);
 
@@ -110,9 +147,9 @@ public class Client {
                         else if (l.getEsito().contains("okLogin")){
                             System.out.println("login riuscito");
 
-                            LoginResult err=new LoginResult();
+                            Response err=new Response();
 
-                            err.setResult(Result.autorizzato);
+                            err.setEsito(Result.autorizzato);
 
                             String StringErr=data.toJson(err);
 
@@ -131,6 +168,10 @@ public class Client {
         Client c=new Client();
         c.avvio();
     }
+
+
+
+
     }
 
 

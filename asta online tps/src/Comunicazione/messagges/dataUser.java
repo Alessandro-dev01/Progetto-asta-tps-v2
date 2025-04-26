@@ -1,15 +1,13 @@
-package Comunicazione.messagges.login;
+package Comunicazione.messagges;
 
-import Comunicazione.messagges.TypeOfMes;
-
-public class Login {
+public class dataUser {
 
     private TypeOfMes type;
 
     private String username;
     private String password;
 
-    public Login(String username, String password) {
+    public dataUser(String username, String password) {
 
         this.type=TypeOfMes.login;
 

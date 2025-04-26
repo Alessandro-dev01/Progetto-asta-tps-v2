@@ -1,12 +1,12 @@
-package Comunicazione.messagges.login;
+package Comunicazione.messagges;
 
-import Comunicazione.messagges.TypeOfMes;
-
-public class LoginRequest {
+public class Request {
     private String type;
 
-    public LoginRequest() {
-        this.type = TypeOfMes.loginRequest.toString();
+    public Request() {}
+
+    public void setType(TypeOfMes type) {
+        this.type = type.toString();
     }
 
     public String getType() {

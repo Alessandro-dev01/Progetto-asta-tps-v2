@@ -1,8 +1,9 @@
 package Comunicazione.server;
 
-import Comunicazione.messagges.login.Login;
-import Comunicazione.messagges.login.LoginRequest;
-import Comunicazione.messagges.login.LoginResponse;
+import Comunicazione.messagges.TypeOfMes;
+import Comunicazione.messagges.dataUser;
+import Comunicazione.messagges.Request;
+import Comunicazione.messagges.Response;
 import Comunicazione.messagges.Result;
 import com.google.gson.Gson;
 import java.io.BufferedReader;
@@ -57,6 +58,7 @@ public class Sever {
     public void avvioServer(){
 
         Socket c;
+        String mes;
         try{
            c=this.serverSocket.accept();
         } catch (IOException e) {
@@ -71,12 +73,31 @@ public class Sever {
                 throw new RuntimeException(e);
            }
 
-        loginRequest();
+
+        do {
+            try {
+                mes=input.readLine();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            System.out.println(mes);
+
+            if (mes.contains("loginRequest")){
+                System.out.println("sono nel login");
+                loginRequest();
+            }
+            else if (mes.contains("autorizzato")){
+                System.out.println("ok");
+            }
+        }while (true);
 
     }
 
     public void loginRequest(){
-        LoginRequest request=new LoginRequest();
+        Request request=new Request();
+
+        request.setType(TypeOfMes.loginRequest);
 
         String mes=this.converter.toJson(request);
 
@@ -92,7 +113,7 @@ public class Sever {
 
         System.out.println(reply);
 
-        Login log=this.converter.fromJson(reply,Login.class);
+        dataUser log=this.converter.fromJson(reply, dataUser.class);
 
         //query per trovare l'utente
         String queryUtente="SELECT * from utente u where u.username= '"
@@ -116,17 +137,18 @@ public class Sever {
 
         try {
             if(resQuery.next()){
-                LoginResponse response=new LoginResponse();
+                Response response=new Response();
 
+                response.setType(TypeOfMes.loginResponse);
                 response.setEsito(Result.okLogin);
 
                 String logres=this.converter.toJson(response);
-                System.out.println(logres);
                 this.output.println(logres);
             }
             else {
-                LoginResponse response=new LoginResponse();
+                Response response=new Response();
 
+                response.setType(TypeOfMes.loginResponse);
                 response.setEsito(Result.erroreLogin);
 
                 String logres=this.converter.toJson(response);
@@ -134,24 +156,6 @@ public class Sever {
                 this.output.println(logres);
             }
         } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-
-        System.out.println("ok");
-
-        try {
-            String res=this.input.readLine();
-
-            if (res.contains("nonAutorizzato")){
-                output.println(this.converter.toJson(request));
-            }
-            else if(res.contains("autorizzato")) {
-                System.out.println("utente loggato");
-            }
-
-
-        } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
