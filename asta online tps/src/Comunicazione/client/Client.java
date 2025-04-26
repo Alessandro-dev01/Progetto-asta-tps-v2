@@ -9,6 +9,7 @@ import com.google.gson.Gson;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.DoubleSummaryStatistics;
 import java.util.LinkedList;
 
 import java.util.Scanner;
@@ -56,32 +57,39 @@ public class Client {
             String mes="";
             int  menu=-1;
 
-            System.out.println(
-                    "inserisci un delle seguenti opzione: " +
-                            "1)login, " +"\n"+
-                            "2)registrazione" +"\n"+
-                    "3)carica oggetti posseduti  "+"\n" +
-                            "4)partecipa pasta"
-            );
-            menu=scanner.nextInt();
+            do {
+                System.out.println(
+                        "inserisci un delle seguenti opzione: " +"\n"+
+                                "1)login, " +"\n"+
+                                "2)registrazione" +"\n"+
+                                "3)carica oggetti posseduti  "+"\n" +
+                                "4)partecipa pasta"
+                );
+                menu=scanner.nextInt();
 
 
-            switch (menu){
-                case 1:{
+                switch (menu){
+                    case 1:{
                         login();
-                    break;
+                        break;
+                    }
+                    case 2:{
+
+                        registrazione();
+                        break;
+                    }
+
                 }
-            }
-
-
-
+            }while (true);
         }
 
-        public void login(){
+
+    public void login(){
             Gson data=new Gson();
             Request re=new Request();
             int operation=-1;
-            Scanner scanner=new Scanner(System.in);
+            Scanner scanL=new Scanner(System.in);
+
             String username =" " , password=" ",mes="";
 
             re.setType(TypeOfMes.loginRequest);
@@ -98,8 +106,6 @@ public class Client {
 
                     reply=this.input.readLine();
 
-                    System.out.println(reply);
-
                     if (reply.contains("loginRequest")){
                         operation=1;
                     } else if (reply.contains("loginResponse")) {
@@ -115,24 +121,18 @@ public class Client {
                     case 1:{
 
                         System.out.println("si richiede di inserire il nome utente");
-                        username=scanner.nextLine();
+                        username=scanL.nextLine();
 
                         System.out.println("si richiede di inserire la password");
-                        password=scanner.nextLine();
+                        password=scanL.nextLine();
                         mes=data.toJson(new dataUser(username,password));
 
                         output.println(mes);
 
-
-
                         break;
                     }
                     case 2:{
-
-                        Response l=data.fromJson(mes, Response.class);
-
-
-                        if (l.getEsito().contains("erroreLogin")){
+                        if (mes.contains("erroreLogin")){
                             System.out.println("login non effetuato, dati errati");
 
                             Request err=new Request();
@@ -144,16 +144,8 @@ public class Client {
                             output.println(StringErr);
 
                         }
-                        else if (l.getEsito().contains("okLogin")){
+                        else {
                             System.out.println("login riuscito");
-
-                            Response err=new Response();
-
-                            err.setEsito(Result.autorizzato);
-
-                            String StringErr=data.toJson(err);
-
-                            output.println(StringErr);
                         }
 
                         break;
@@ -164,13 +156,55 @@ public class Client {
 
         }
 
+    private void registrazione(){
+
+        String password="", mes="",reply="";
+        Gson data=new Gson();
+        Scanner scanR=new Scanner(System.in);
+
+            do {
+
+                System.out.println("si richiede di inserire il nome utente");
+                username=scanR.nextLine();
+
+
+                System.out.println("si richiede di inserire la password");
+                password=scanR.nextLine();
+
+                dataUser d=new dataUser(username,password);
+
+                d.setType(TypeOfMes.registrazione);
+
+                mes=data.toJson(d);
+
+                output.println(mes);
+
+                try {
+                    reply=input.readLine();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+                if (reply.contains("okRegistrazione")){
+                    System.out.println("registrazione avvenuta con successo");
+                    break;
+                }
+                else if (reply.contains("erroreRegistrazione")){
+                    System.out.println("errore nella registrazione");
+                }
+
+            }while (true);
+
+
+
+
+    }
+
+
     public static void main(String[] args) {
         Client c=new Client();
         c.avvio();
     }
-
-
-
 
     }
 

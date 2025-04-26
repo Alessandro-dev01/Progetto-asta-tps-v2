@@ -2,17 +2,25 @@ package Comunicazione.messagges;
 
 public class dataUser {
 
-    private TypeOfMes type;
+    private String type;
 
     private String username;
     private String password;
 
     public dataUser(String username, String password) {
 
-        this.type=TypeOfMes.login;
+        this.type=TypeOfMes.login.toString();
 
         this.username = username;
         this.password = password;
+    }
+
+    public String getType() {
+        return type.toString();
+    }
+
+    public void setType(TypeOfMes type) {
+        this.type = type.toString();
     }
 
     public String getUsername() {

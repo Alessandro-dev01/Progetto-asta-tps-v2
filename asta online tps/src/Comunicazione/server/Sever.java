@@ -89,6 +89,8 @@ public class Sever {
             }
             else if (mes.contains("autorizzato")){
                 System.out.println("ok");
+            } else if (mes.contains("registrazione")) {
+                registrazioneRequest(mes);
             }
         }while (true);
 
@@ -152,7 +154,6 @@ public class Sever {
                 response.setEsito(Result.erroreLogin);
 
                 String logres=this.converter.toJson(response);
-                System.out.println(logres);
                 this.output.println(logres);
             }
         } catch (SQLException e) {
@@ -160,6 +161,81 @@ public class Sever {
         }
 
     }
+
+    private void registrazioneRequest(String mes) {
+
+        dataUser reg=this.converter.fromJson(mes,dataUser.class);
+
+        //query per trovare l'utente
+        String queryUtente="SELECT * from utente u where u.username= '"
+                +reg.getUsername()+"'";
+
+        Statement stm;
+        try {
+            stm=this.con.createStatement();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        ResultSet resQuery;
+        try {
+            resQuery=stm.executeQuery(queryUtente);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+
+        try {
+            if(resQuery.next()){
+                Response response=new Response();
+
+                response.setType(TypeOfMes.registrazioneResponse);
+                response.setEsito(Result.erroreRegistrazione);
+
+                String logres=this.converter.toJson(response);
+                this.output.println(logres);
+            }
+            else {
+
+                String insert="INSERT INTO utente(username,password) " +
+                        "VALUES('"+reg.getUsername()+"','"+reg.getPassword()+"')";
+
+                Statement stmReg;
+                try {
+                    stmReg=this.con.createStatement();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+
+                int regS=stmReg.executeUpdate(insert);
+
+                if (regS!=0){
+                    Response response=new Response();
+
+                    response.setType(TypeOfMes.registrazioneResponse);
+                    response.setEsito(Result.okRegistrazione);
+
+                    String logres=this.converter.toJson(response);
+                    this.output.println(logres);
+                } else {
+                    Response response=new Response();
+
+                    response.setType(TypeOfMes.registrazioneResponse);
+                    response.setEsito(Result.erroreRegistrazione);
+
+                    String logres=this.converter.toJson(response);
+                    this.output.println(logres);
+                }
+
+
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+
+    }
+
 
     public static void main(String[] args) {
         Sever server=new Sever();
