@@ -1,8 +1,9 @@
 package Comunicazione.server;
 
-import Comunicazione.messagges.login.Login;
-import Comunicazione.messagges.login.LoginRequest;
-import Comunicazione.messagges.login.LoginResponse;
+import Comunicazione.messagges.TypeOfMes;
+import Comunicazione.messagges.dataUser;
+import Comunicazione.messagges.Request;
+import Comunicazione.messagges.Response;
 import Comunicazione.messagges.Result;
 import com.google.gson.Gson;
 import java.io.BufferedReader;
@@ -57,6 +58,7 @@ public class Sever {
     public void avvioServer(){
 
         Socket c;
+        String mes;
         try{
            c=this.serverSocket.accept();
         } catch (IOException e) {
@@ -71,12 +73,33 @@ public class Sever {
                 throw new RuntimeException(e);
            }
 
-        loginRequest();
+
+        do {
+            try {
+                mes=input.readLine();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            System.out.println(mes);
+
+            if (mes.contains("loginRequest")){
+                System.out.println("sono nel login");
+                loginRequest();
+            }
+            else if (mes.contains("autorizzato")){
+                System.out.println("ok");
+            } else if (mes.contains("registrazione")) {
+                registrazioneRequest(mes);
+            }
+        }while (true);
 
     }
 
     public void loginRequest(){
-        LoginRequest request=new LoginRequest();
+        Request request=new Request();
+
+        request.setType(TypeOfMes.loginRequest);
 
         String mes=this.converter.toJson(request);
 
@@ -92,7 +115,7 @@ public class Sever {
 
         System.out.println(reply);
 
-        Login log=this.converter.fromJson(reply,Login.class);
+        dataUser log=this.converter.fromJson(reply, dataUser.class);
 
         //query per trovare l'utente
         String queryUtente="SELECT * from utente u where u.username= '"
@@ -116,46 +139,103 @@ public class Sever {
 
         try {
             if(resQuery.next()){
-                LoginResponse response=new LoginResponse();
+                Response response=new Response();
 
+                response.setType(TypeOfMes.loginResponse);
                 response.setEsito(Result.okLogin);
 
                 String logres=this.converter.toJson(response);
-                System.out.println(logres);
                 this.output.println(logres);
             }
             else {
-                LoginResponse response=new LoginResponse();
+                Response response=new Response();
 
+                response.setType(TypeOfMes.loginResponse);
                 response.setEsito(Result.erroreLogin);
 
                 String logres=this.converter.toJson(response);
-                System.out.println(logres);
                 this.output.println(logres);
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
 
+    }
 
-        System.out.println("ok");
+    private void registrazioneRequest(String mes) {
 
+        dataUser reg=this.converter.fromJson(mes,dataUser.class);
+
+        //query per trovare l'utente
+        String queryUtente="SELECT * from utente u where u.username= '"
+                +reg.getUsername()+"'";
+
+        Statement stm;
         try {
-            String res=this.input.readLine();
-
-            if (res.contains("nonAutorizzato")){
-                output.println(this.converter.toJson(request));
-            }
-            else if(res.contains("autorizzato")) {
-                System.out.println("utente loggato");
-            }
-
-
-        } catch (IOException e) {
+            stm=this.con.createStatement();
+        } catch (SQLException e) {
             throw new RuntimeException(e);
         }
 
+        ResultSet resQuery;
+        try {
+            resQuery=stm.executeQuery(queryUtente);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+
+        try {
+            if(resQuery.next()){
+                Response response=new Response();
+
+                response.setType(TypeOfMes.registrazioneResponse);
+                response.setEsito(Result.erroreRegistrazione);
+
+                String logres=this.converter.toJson(response);
+                this.output.println(logres);
+            }
+            else {
+
+                String insert="INSERT INTO utente(username,password) " +
+                        "VALUES('"+reg.getUsername()+"','"+reg.getPassword()+"')";
+
+                Statement stmReg;
+                try {
+                    stmReg=this.con.createStatement();
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+
+                int regS=stmReg.executeUpdate(insert);
+
+                if (regS!=0){
+                    Response response=new Response();
+
+                    response.setType(TypeOfMes.registrazioneResponse);
+                    response.setEsito(Result.okRegistrazione);
+
+                    String logres=this.converter.toJson(response);
+                    this.output.println(logres);
+                } else {
+                    Response response=new Response();
+
+                    response.setType(TypeOfMes.registrazioneResponse);
+                    response.setEsito(Result.erroreRegistrazione);
+
+                    String logres=this.converter.toJson(response);
+                    this.output.println(logres);
+                }
+
+
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+
     }
+
 
     public static void main(String[] args) {
         Sever server=new Sever();

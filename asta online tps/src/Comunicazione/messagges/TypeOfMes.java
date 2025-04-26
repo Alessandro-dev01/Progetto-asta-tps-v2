@@ -4,6 +4,8 @@ public enum TypeOfMes {
     login,
     loginResponse,
     loginRequest,
+    registrazione,
+    registrazioneResponse,
     visualizza_posseduti,
     richiesta_oggetti_In_asta,
     partecipa_asta,

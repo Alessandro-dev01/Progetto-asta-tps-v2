@@ -1,15 +1,21 @@
-package Comunicazione.messagges.login;
+package Comunicazione.messagges;
 
-import Comunicazione.messagges.Result;
-import Comunicazione.messagges.TypeOfMes;
-
-public class LoginResponse {
+public class Response {
     private String type;
     private String esito;
 
-    public LoginResponse() {
+    public Response() {
         this.type= TypeOfMes.loginResponse.toString();
         this.esito= Result.erroreLogin.toString();
+    }
+
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(TypeOfMes type) {
+        this.type = type.toString();
     }
 
     public String getEsito() {

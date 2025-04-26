@@ -1,15 +1,15 @@
 package Comunicazione.client;
 
 import Comunicazione.messagges.*;
-import Comunicazione.messagges.login.Login;
-import Comunicazione.messagges.login.LoginResponse;
-import Comunicazione.messagges.login.LoginResult;
+import Comunicazione.messagges.dataUser;
+import Comunicazione.messagges.Response;
 import StrutturaOggetti.Prodotto;
 import com.google.gson.Gson;
 
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.DoubleSummaryStatistics;
 import java.util.LinkedList;
 
 import java.util.Scanner;
@@ -24,7 +24,7 @@ public class Client {
     private ThreadClientMulticast th;
     private BufferedReader input;
     private PrintWriter output;
-
+    private Gson converter;
         public Client(){
 
 
@@ -44,32 +44,73 @@ public class Client {
             }
 
            this.th=new ThreadClientMulticast(25001);
+
+            this.converter=new Gson();
         }
 
         public void avvio(){
 
             //this.th.start();
             Scanner scanner=new Scanner(System.in);
-            String username =" " , password=" ";
-            Gson data=new Gson();
+
+
             String mes="";
+            int  menu=-1;
+
+            do {
+                System.out.println(
+                        "inserisci un delle seguenti opzione: " +"\n"+
+                                "1)login, " +"\n"+
+                                "2)registrazione" +"\n"+
+                                "3)carica oggetti posseduti  "+"\n" +
+                                "4)partecipa pasta"
+                );
+                menu=scanner.nextInt();
+
+
+                switch (menu){
+                    case 1:{
+                        login();
+                        break;
+                    }
+                    case 2:{
+
+                        registrazione();
+                        break;
+                    }
+
+                }
+            }while (true);
+        }
+
+
+    public void login(){
+            Gson data=new Gson();
+            Request re=new Request();
             int operation=-1;
-          
+            Scanner scanL=new Scanner(System.in);
+
+            String username =" " , password=" ",mes="";
+
+            re.setType(TypeOfMes.loginRequest);
+
+            String req=this.converter.toJson(re);
+
+            this.output.println(re);
+
 
             String reply = "";
 
             do{
                 try {
 
-                        reply=this.input.readLine();
+                    reply=this.input.readLine();
 
-                        System.out.println(reply);
-
-                        if (reply.contains("loginRequest")){
-                            operation=1;
-                        } else if (reply.contains("loginResponse")) {
-                            operation=2;
-                        }
+                    if (reply.contains("loginRequest")){
+                        operation=1;
+                    } else if (reply.contains("loginResponse")) {
+                        operation=2;
+                    }
 
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -80,43 +121,31 @@ public class Client {
                     case 1:{
 
                         System.out.println("si richiede di inserire il nome utente");
-                        username=scanner.nextLine();
+                        username=scanL.nextLine();
 
                         System.out.println("si richiede di inserire la password");
-                        password=scanner.nextLine();
-                        mes=data.toJson(new Login(username,password));
+                        password=scanL.nextLine();
+                        mes=data.toJson(new dataUser(username,password));
 
                         output.println(mes);
-
-
 
                         break;
                     }
                     case 2:{
-
-                        LoginResponse l=data.fromJson(mes,LoginResponse.class);
-
-
-                        if (l.getEsito().contains("erroreLogin")){
+                        if (mes.contains("erroreLogin")){
                             System.out.println("login non effetuato, dati errati");
 
-                            LoginResult err=new LoginResult();
+                            Request err=new Request();
+
+                            err.setType(TypeOfMes.loginRequest);
 
                             String StringErr=data.toJson(err);
 
                             output.println(StringErr);
 
                         }
-                        else if (l.getEsito().contains("okLogin")){
+                        else {
                             System.out.println("login riuscito");
-
-                            LoginResult err=new LoginResult();
-
-                            err.setResult(Result.autorizzato);
-
-                            String StringErr=data.toJson(err);
-
-                            output.println(StringErr);
                         }
 
                         break;
@@ -127,10 +156,56 @@ public class Client {
 
         }
 
+    private void registrazione(){
+
+        String password="", mes="",reply="";
+        Gson data=new Gson();
+        Scanner scanR=new Scanner(System.in);
+
+            do {
+
+                System.out.println("si richiede di inserire il nome utente");
+                username=scanR.nextLine();
+
+
+                System.out.println("si richiede di inserire la password");
+                password=scanR.nextLine();
+
+                dataUser d=new dataUser(username,password);
+
+                d.setType(TypeOfMes.registrazione);
+
+                mes=data.toJson(d);
+
+                output.println(mes);
+
+                try {
+                    reply=input.readLine();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+                if (reply.contains("okRegistrazione")){
+                    System.out.println("registrazione avvenuta con successo");
+                    break;
+                }
+                else if (reply.contains("erroreRegistrazione")){
+                    System.out.println("errore nella registrazione");
+                }
+
+            }while (true);
+
+
+
+
+    }
+
+
     public static void main(String[] args) {
         Client c=new Client();
         c.avvio();
     }
+
     }
 
 

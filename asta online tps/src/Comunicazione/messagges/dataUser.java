@@ -1,20 +1,26 @@
-package Comunicazione.messagges.login;
+package Comunicazione.messagges;
 
-import Comunicazione.messagges.TypeOfMes;
+public class dataUser {
 
-public class Login {
-
-    private TypeOfMes type;
+    private String type;
 
     private String username;
     private String password;
 
-    public Login(String username, String password) {
+    public dataUser(String username, String password) {
 
-        this.type=TypeOfMes.login;
+        this.type=TypeOfMes.login.toString();
 
         this.username = username;
         this.password = password;
+    }
+
+    public String getType() {
+        return type.toString();
+    }
+
+    public void setType(TypeOfMes type) {
+        this.type = type.toString();
     }
 
     public String getUsername() {
