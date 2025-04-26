@@ -1,6 +1,9 @@
 package Comunicazione.client;
 
 import Comunicazione.messagges.*;
+import Comunicazione.messagges.login.Login;
+import Comunicazione.messagges.login.LoginResponse;
+import Comunicazione.messagges.login.LoginResult;
 import StrutturaOggetti.Prodotto;
 import com.google.gson.Gson;
 
@@ -104,7 +107,7 @@ public class Client {
                             output.println(StringErr);
 
                         }
-                        else {
+                        else if (l.getEsito().contains("okLogin")){
                             System.out.println("login riuscito");
 
                             LoginResult err=new LoginResult();

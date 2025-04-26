@@ -1,12 +1,15 @@
-package Comunicazione.messagges;
+package Comunicazione.messagges.login;
+
+import Comunicazione.messagges.Result;
+import Comunicazione.messagges.TypeOfMes;
 
 public class LoginResult {
     private String type;
     private String result;
 
     public LoginResult() {
-        this.type=TypeOfMes.loginResponse.toString();
-        this.result=Result.nonAutorizzato.toString();
+        this.type= TypeOfMes.loginResponse.toString();
+        this.result= Result.nonAutorizzato.toString();
     }
 
     public String getResult() {

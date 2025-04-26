@@ -1,4 +1,6 @@
-package Comunicazione.messagges;
+package Comunicazione.messagges.login;
+
+import Comunicazione.messagges.TypeOfMes;
 
 public class Login {
 

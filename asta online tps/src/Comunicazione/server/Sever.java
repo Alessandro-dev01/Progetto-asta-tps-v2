@@ -1,21 +1,18 @@
 package Comunicazione.server;
 
-import Comunicazione.messagges.LoginRequest;
-import Comunicazione.messagges.LoginResponse;
+import Comunicazione.messagges.login.Login;
+import Comunicazione.messagges.login.LoginRequest;
+import Comunicazione.messagges.login.LoginResponse;
 import Comunicazione.messagges.Result;
 import com.google.gson.Gson;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.*;
 
-
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 
 public class Sever {
 
@@ -95,14 +92,51 @@ public class Sever {
 
         System.out.println(reply);
 
+        Login log=this.converter.fromJson(reply,Login.class);
 
-        LoginResponse response=new LoginResponse();
+        //query per trovare l'utente
+        String queryUtente="SELECT * from utente u where u.username= '"
+                +log.getUsername()+"' AND u.password='"+log.getPassword()+"'";
 
-        response.setEsito(Result.erroreLogin);
+        //prendo tutti i prodotti
+        Statement stm;
+        try {
+           stm=this.con.createStatement();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
 
-        String logres=this.converter.toJson(response);
-        System.out.println(logres);
-        this.output.println(logres);
+        ResultSet resQuery;
+        try {
+            resQuery=stm.executeQuery(queryUtente);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+
+        try {
+            if(resQuery.next()){
+                LoginResponse response=new LoginResponse();
+
+                response.setEsito(Result.okLogin);
+
+                String logres=this.converter.toJson(response);
+                System.out.println(logres);
+                this.output.println(logres);
+            }
+            else {
+                LoginResponse response=new LoginResponse();
+
+                response.setEsito(Result.erroreLogin);
+
+                String logres=this.converter.toJson(response);
+                System.out.println(logres);
+                this.output.println(logres);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
 
         System.out.println("ok");
 
