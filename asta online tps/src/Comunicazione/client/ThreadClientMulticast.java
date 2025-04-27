@@ -32,8 +32,6 @@ public class ThreadClientMulticast extends Thread {
 
         byte[] buffer = new byte[1024];
 
-        System.out.println("In ascolto delle offerte per il prodotto ID: " + idProdotto);
-
         while (true) {
             try {
 
