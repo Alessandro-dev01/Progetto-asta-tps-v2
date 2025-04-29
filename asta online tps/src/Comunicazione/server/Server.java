@@ -30,10 +30,8 @@ public class Server {
     private ServerSocket serverSocket;
     private ExecutorService executorService;
 
-
-
     public Server() throws IOException {
-        this.executorService= Executors.newCachedThreadPool();
+        this.executorService = Executors.newCachedThreadPool();
 
         try {
             // Inizializza il ServerSocket per comunicare con i client
@@ -45,16 +43,16 @@ public class Server {
 
     // Metodo principale per l'avvio del server
     public void avvioServer() throws IOException {
-        Socket c;
+        Socket client;
 
-       do{
-        try {
-            c = this.serverSocket.accept(); // Aspetta che un client si connetta
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        do {
+            try {
+                client = this.serverSocket.accept(); // Aspetta che un client si connetta
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
 
-        this.executorService.submit(new RunnableAsta(c,this.DB_URL,this.password,this.user));
+            this.executorService.submit(new RunnableAsta(client, this.DB_URL, this.password, this.user));
 
 
         } while (true); // Ciclo continuo per gestire le comunicazioni
@@ -62,7 +60,7 @@ public class Server {
 
     public static void main(String[] args) {
         try {
-            Server server=new Server();
+            Server server = new Server();
             server.avvioServer();
         } catch (IOException e) {
             throw new RuntimeException(e);

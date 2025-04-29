@@ -9,5 +9,6 @@ public enum Result {
     offertaNonValida,
     nonAutorizzato,
     autorizzato,
-    astaTerminata
+    astaTerminata,
+    erroreCreazioneAsta
 }

@@ -13,13 +13,14 @@ public class ThreadClientMulticast extends Thread {
     private MulticastSocket socket;
     private InetAddress group;
     private static final int portaMulticast = 6000;
-    private static final String mulicastIp = "230.0.0.1";
+    private static final String multicastIp = "230.0.0.1";
+    private double offertaCorr = 0.0;
 
 
-    public ThreadClientMulticast(int idProdotto) {
+    public ThreadClientMulticast(int idProdotto, String multicastIp, int portaMulticast) {
         this.idProdotto = idProdotto;
         try {
-            this.group = InetAddress.getByName(mulicastIp);
+            this.group = InetAddress.getByName(multicastIp);
             this.socket = new MulticastSocket(portaMulticast);
             this.socket.joinGroup(group);
         } catch (IOException e) {
@@ -47,22 +48,40 @@ public class ThreadClientMulticast extends Thread {
                     String utente = jsonOfferta.get("utente").getAsString();
                     int idProdotto = jsonOfferta.get("id_prodotto").getAsInt();
                     double importo = jsonOfferta.get("importo").getAsDouble();
-                    String timestamp = jsonOfferta.get("timestamp").getAsString();
+                    String timestamp = jsonOfferta.get("data_offerta").getAsString();
 
-                    System.out.println("Offerta ricevuta:");
-                    System.out.println("Utente: " + utente);
-                    System.out.println("ID Prodotto: " + idProdotto);
-                    System.out.println("Importo: " + importo);
-                    System.out.println("Timestamp: " + timestamp);
+                    if (importo > offertaCorr) {
+                        offertaCorr = importo;
+                        System.out.println("Nuova offerta ricevuta:");
+                        System.out.println("Utente: " + utente);
+                        System.out.println("ID Prodotto: " + idProdotto);
+                        System.out.println("Importo: " + importo);
+                        System.out.println("data_offerta: " + timestamp);
+                    }
 
+                }
+
+                if (jsonOfferta.has("type") && jsonOfferta.get("type").getAsString().equals("fine_asta")) {
+                    int id = jsonOfferta.get("id_prodotto").getAsInt();
+
+                    if (id == this.idProdotto) {
+                        String vincitore = jsonOfferta.get("vincitore").getAsString();
+                        double importoFinale = jsonOfferta.get("importo_finale").getAsDouble();
+
+                        System.out.println("Asta terminata per il prodotto ID " + idProdotto);
+                        System.out.println("Vincitore: " + vincitore);
+                        System.out.println("Importo Finale: " + importoFinale + " €");
+
+                        break;
+                    }
                 }
 
             } catch (IOException e) {
                 System.out.println("Errore nella ricezione multicast: " + e.getMessage());
                 break;
             }
-
         }
+
         try {
             socket.leaveGroup(group);
             socket.close();

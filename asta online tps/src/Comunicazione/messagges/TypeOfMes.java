@@ -13,5 +13,7 @@ public enum TypeOfMes {
     offerta,
     nuova_offerta,
     fine_asta,
-
+    creazione_asta,
+    Asta,
+    possedutiRequest
 }
