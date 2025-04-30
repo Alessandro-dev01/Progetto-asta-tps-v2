@@ -28,33 +28,21 @@ public class RunnableAsta implements Runnable {
     private Gson converter;
     private BufferedReader input;
     private PrintWriter output;
-    private IniziallizatoreAsta gestioneAsta;
-
 
     // Multicast Socket per inviare messaggi
-    private MulticastSocket multicastSocket;
 
     public RunnableAsta(Socket client, String DB_URL, String password, String user) {
-        this.gestioneAsta=new IniziallizatoreAsta();
-        this.gestioneAsta.start();
         this.client = client;
         this.converter = new Gson();
 
         // Connessione al database per interagire con i dati relativi agli utenti e prodotti
-//        try {
-//            this.con = DriverManager.getConnection(DB_URL, user, password);
-//            this.multicastSocket = new MulticastSocket();
-//
-//        } catch (SQLException e) {
-//            System.err.println("Errore connessione al database: " + e.getMessage());
-//
-//        } catch (UnknownHostException e) {
-//            throw new RuntimeException(e);
-//
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
+        try {
+            this.con = DriverManager.getConnection(DB_URL, user, password);
 
+
+        } catch (SQLException e) {
+            System.err.println("Errore connessione al database: " + e.getMessage());
+        }
     }
 
     @Override
@@ -152,6 +140,8 @@ public class RunnableAsta implements Runnable {
 
         try (Statement stm = this.con.createStatement();
              ResultSet resQuery = stm.executeQuery(queryUtente)) {
+
+            System.out.println(resQuery.toString());
 
             if (resQuery.next()) { // Se l'utente esiste nel database
                 Response response = new Response();
@@ -286,7 +276,7 @@ public class RunnableAsta implements Runnable {
 
         DatiAsta daR=this.converter.fromJson(mes,DatiAsta.class);
 
-      String sql = "SELECT id, nome, descrizione, prezzo_base, indirizzo_multicast, username, porta_multicast, nome_categoria, stato FROM prodotto WHERE username= ? AND id=?";
+      String sql = "SELECT id, nome, descrizione, prezzo_base,indirizzo_multicast, username, porta_multicast, nome_categoria, stato FROM prodotto WHERE username= ? AND id=?";
 
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, this.username);
@@ -309,15 +299,14 @@ public class RunnableAsta implements Runnable {
 
                     String prodJson=this.converter.toJson(p);
 
-                    Socket sAsta=new Socket(InetAddress.getByName("127.0.0.1"),5001);
+                    Socket sAsta=new Socket(InetAddress.getByName("127.0.0.1"),4000);
 
                   PrintWriter outputAsta=new PrintWriter(sAsta.getOutputStream(),true);
 
                   outputAsta.println(prodJson);
 
+                   System.out.println("ho inviato il messaggio");
 
-
-                  outputAsta.close();
                 }
                else {
                    Response r=new Response();

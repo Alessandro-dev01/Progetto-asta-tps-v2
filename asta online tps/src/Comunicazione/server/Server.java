@@ -1,5 +1,6 @@
 package Comunicazione.server;
 
+import Comunicazione.asta.IniziallizatoreAsta;
 import Comunicazione.client.ThreadClientMulticast;
 import Comunicazione.messagges.*;
 import StrutturaOggetti.Prodotto;

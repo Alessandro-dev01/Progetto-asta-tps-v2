@@ -2,7 +2,6 @@ package Comunicazione.asta;
 
 import Comunicazione.messagges.Offerta;
 import com.google.gson.Gson;
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
