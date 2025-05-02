@@ -16,28 +16,19 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
 
 // classe gestore che si occcupa della gestione dell'asta e modifica il db in funzione dell'asta
-public class GestoreAsta implements Runnable {
+public class GestoreAstaNoInput implements Runnable {
 
     private Connection con;
-    private Socket client;
-    private BufferedReader input;
-    private PrintWriter output;
     private Gson converter;
     private String datiProdotto;
     private MonitorVincitore mv;
     private LinkedList<String> partecipanti;
+    private Prodotto  prod; //solo in caso in cui si crei asta senza client
 
-    public GestoreAsta(Socket richiedenteAsta, String DB_URL, String password, String user, LinkedList<String> partecipanti) {
-        this.client = richiedenteAsta;
+    public GestoreAstaNoInput(String DB_URL, String password, String user,Prodotto p) {
         this.converter = new Gson(); // Inizializza sempre il converter
         this.partecipanti = new LinkedList<>();
-
-        try {
-            this.input = new BufferedReader(new InputStreamReader(this.client.getInputStream()));
-            this.output = new PrintWriter(this.client.getOutputStream(), true);
-        } catch (IOException e) {
-            throw new RuntimeException("Errore nella creazione degli stream I/O: " + e.getMessage(), e);
-        }
+        this.prod=p;
 
         try {
             this.con = DriverManager.getConnection(DB_URL, user, password);
@@ -50,57 +41,14 @@ public class GestoreAsta implements Runnable {
 
     @Override
     public void run() {
-        try {
-            this.datiProdotto = this.input.readLine();
-            System.out.println("Ho ricevuto i dati: " + this.datiProdotto);
-        } catch (IOException ex) {
-            throw new RuntimeException("Errore nella lettura dei dati dal client", ex);
-        }
 
-        if (this.datiProdotto == null || this.datiProdotto.isEmpty()) {
-            System.err.println("Dati prodotto vuoti o nulli.");
-            closeConnections();
-            return;
-        }
 
-        Prodotto prod;
-        try {
-            prod = this.converter.fromJson(this.datiProdotto, Prodotto.class);
-        } catch (Exception e) {
-            System.err.println("Errore durante la conversione JSON a Prodotto: " + e.getMessage());
-            sendAstaCreationError();
-            closeConnections();
-            return;
-        }
 
-        if (prod == null) {
+        if (this.prod == null) {
             System.err.println("Prodotto risultante dalla conversione è null");
-            sendAstaCreationError();
-            closeConnections();
             return;
         }
 
-        System.out.println("Prodotto convertito: " + prod);
-
-        // Aggiorna lo stato del prodotto nel database
-        String update = "UPDATE prodotto SET stato='in_asta' WHERE id=?";
-        try (PreparedStatement stm = this.con.prepareStatement(update)) {
-            stm.setInt(1, prod.getId());
-            int res = stm.executeUpdate(); // Non passare nuovamente la query qui
-
-            System.out.println("Query eseguita, righe aggiornate: " + res);
-            if (res == 0) {
-                System.err.println("Nessun prodotto aggiornato, errore nella creazione dell'asta");
-                sendAstaCreationError();
-                closeConnections();
-                return;
-            }
-        } catch (SQLException e) {
-            System.err.println("Errore durante l'esecuzione della query: " + e.getMessage());
-            sendAstaCreationError();
-            closeConnections();
-            return;
-        }
 
         // Collegamento al gruppo multicast per partecipare all'asta
         try (MulticastSocket multicastSocket = new MulticastSocket(prod.getPortaMulticast())) {
@@ -157,7 +105,7 @@ public class GestoreAsta implements Runnable {
             //una volta raggiunto il numero minimo di persone si invia
             // un pachetto multicast per far iniziare l'asta
             byte[] pk=new byte[512];
-            
+
             Response inizio = new Response(Result.ok, TypeOfMes.start_asta);
             System.out.println("sono fuori dal while");
             String start=this.converter.toJson(inizio,Response.class);
@@ -176,7 +124,7 @@ public class GestoreAsta implements Runnable {
 
             outputMulticast=new DatagramPacket(pk,pk.length,groupAddress, prod.getPortaMulticast());
 
-           // output.println(this.converter.toJson(inizio));
+            // output.println(this.converter.toJson(inizio));
 
             try {
                 Thread.sleep(2000);
@@ -255,29 +203,14 @@ public class GestoreAsta implements Runnable {
 
             }
 
-    } catch (IOException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
 
     }
-    private void sendAstaCreationError() {
-        Response resp = new Response();
-        resp.setType(TypeOfMes.creazione_asta);
-        resp.setEsito(Result.erroreCreazioneAsta);
-        String jsonResp = this.converter.toJson(resp);
-        this.output.println(jsonResp);
-    }
 
-    public void closeConnections(){
-        try {
-            if (this.client != null && !this.client.isClosed()) {
-                this.client.close();
-            }
-        } catch (IOException e) {
-            System.err.println("Errore nella chiusura della connessione: " + e.getMessage());
-        }
-    }
+
 }
 
 
