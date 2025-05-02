@@ -1,5 +1,7 @@
 package Comunicazione.server;
 
+import Comunicazione.asta.InizializzatoreAsta;
+
 import java.io.IOException;
 import java.net.*;
 import java.util.concurrent.ExecutorService;
@@ -48,7 +50,7 @@ public class Server {
     public static void main(String[] args) {
         try {
             Server server = new Server();
-            server.avvioServer();
+            server.avvioServer();;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

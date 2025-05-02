@@ -6,7 +6,8 @@ package Comunicazione.asta;
 public class MonitorVincitore {
     private String vincitore;
     private double offertaMassima;
-    private boolean asta = false;
+    private boolean InizioAsta = false;
+    private boolean FineAsta = false;
     private long ultimaOff; // tempo ultima offerta impostato nell'istante corrente
     private final long timeout = 15000;
 
@@ -34,7 +35,14 @@ public class MonitorVincitore {
     }
 
     public synchronized void terminaAsta() {
-        asta = true;
+        InizioAsta = true;
+    }
+
+    public synchronized   boolean isAstaTerminata() {
+        return FineAsta;
+    }
+    public synchronized void setFineAsta(boolean fineAsta) {
+        FineAsta = fineAsta;
     }
 
     public synchronized void aggiornaOfferta(String username, double offerta) {
@@ -50,14 +58,22 @@ public class MonitorVincitore {
     }
 
     // Restituisce true se l'asta è terminata per timeout o se è stata esplicitamente chiusa.
-    public boolean isAstaTerminata() {
-        if (asta) {
-            return true;
-        }
-        if ((System.currentTimeMillis() - ultimaOff) > timeout) {
-            return true;
-        }
-        return false;
+//    public boolean isAstaTerminata() {
+//        if (asta) {
+//            return true;
+//        }
+//        if ((System.currentTimeMillis() - ultimaOff) > timeout) {
+//            return true;
+//        }
+//        return false;
+//    }
+
+    public synchronized boolean isAstaIniziata() {
+        return InizioAsta;
+    }
+
+    public synchronized void setInizioAsta(boolean inizioAsta) {
+        this.InizioAsta = inizioAsta;
     }
 
     @Override

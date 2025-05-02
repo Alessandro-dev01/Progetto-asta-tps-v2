@@ -59,7 +59,6 @@ public class AstaClientHandler implements Runnable {
                 throw new RuntimeException(e);
             }
 
-            System.out.println(mes);
 
             // Gestisce diverse richieste ricevute dal client
             if (mes.contains("loginRequest")) {
@@ -130,7 +129,6 @@ public class AstaClientHandler implements Runnable {
             throw new RuntimeException(e);
         }
 
-        System.out.println(reply);
 
         dataUser log = this.converter.fromJson(reply, dataUser.class);
 
@@ -140,7 +138,6 @@ public class AstaClientHandler implements Runnable {
         try (Statement stm = this.con.createStatement();
              ResultSet resQuery = stm.executeQuery(queryUtente)) {
 
-            System.out.println(resQuery.toString());
 
             if (resQuery.next()) { // Se l'utente esiste nel database
                 Response response = new Response();
@@ -197,8 +194,6 @@ public class AstaClientHandler implements Runnable {
     public void partecipaAsta(String msg) {
         vincitore = "";
 
-        System.out.println("Richiesta ricevuta: " + msg);
-
         PartecipazioneRequest partecipazioneRequest = this.converter.fromJson(msg, PartecipazioneRequest.class);
 
         if (partecipazioneRequest != null && partecipazioneRequest.getType() != null && partecipazioneRequest.getType().contains("partecipa_asta")) {
@@ -254,6 +249,10 @@ public class AstaClientHandler implements Runnable {
 
                     outputAsta.println(prodJson);
 
+                    Response resp=new Response(Result.ok,TypeOfMes.creazione_asta);
+                    String js=this.converter.toJson(resp,Response.class);
+
+                    this.output.println(js);
 
                 } else {
                     Response r = new Response();
@@ -302,7 +301,7 @@ public class AstaClientHandler implements Runnable {
 
     // Invio della lista dei prodotti all'creazione_asta
     public void inviaListaProdotti() {
-        String query = "SELECT * FROM prodotto ORDER BY nome_categoria";
+        String query = "SELECT * FROM prodotto WHERE stato='in_asta' ORDER BY nome_categoria ";
         try (Statement stm = con.createStatement();
              ResultSet rs = stm.executeQuery(query)) {
 

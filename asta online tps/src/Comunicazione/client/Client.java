@@ -1,7 +1,6 @@
 package Comunicazione.client;
 
 import Comunicazione.asta.MonitorVincitore;
-import Comunicazione.asta.ThreadLetturaAsta;
 import Comunicazione.messagges.*;
 import Comunicazione.messagges.dataUser;
 import StrutturaOggetti.Prodotto;
@@ -13,10 +12,7 @@ import com.google.gson.reflect.TypeToken;
 
 import java.io.*;
 import java.lang.reflect.Type;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.Socket;
+import java.net.*;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Scanner;
@@ -25,9 +21,8 @@ public class Client {
 
     private String username;
     private Socket connSer;
-    private HashMap<Integer, Prodotto> prodotti;
     private Socket clientTcp;
-    private ThreadLetturaAsta th;
+    private ThreadLetturaAstaClient th;
     private BufferedReader input;
     private PrintWriter output;
     private Gson converter;
@@ -263,13 +258,13 @@ public class Client {
         String jsonRichiesta = converter.toJson(richiesta); // Serializza l'oggetto in JSON
         output.println(jsonRichiesta);
 
-        System.out.println("ho inviato il messaggio");
+
 
         // Riceve la risposta dal server
         String rispostaServer = input.readLine();
-        System.out.println("ricevuto il messaggio");
+
         PartecipazioneResponse risposta = converter.fromJson(rispostaServer, PartecipazioneResponse.class);
-        System.out.println("ho convertito");
+
 
 
         // Verifica che la risposta del server sia positiva
@@ -281,6 +276,25 @@ public class Client {
         String indirizzoMulti = risposta.getIndirizzo_multicast();
         int portaMulti = risposta.getPorta_multicast();
 
+        byte[] pk =new  byte[512];
+       MulticastSocket socket = new MulticastSocket();
+
+        socket.joinGroup(InetAddress.getByName(indirizzoMulti));
+
+        DatagramPacket outputM=new DatagramPacket(pk,pk.length,InetAddress.getByName(indirizzoMulti),portaMulti);
+        DatagramPacket inputM=new DatagramPacket(pk,pk.length);
+
+        MessaggioPresenza p=new MessaggioPresenza(this.username);
+        String pres=this.converter.toJson(p,MessaggioPresenza.class);
+
+        outputM.setData(pres.getBytes());
+
+        System.out.println(indirizzoMulti+" "+portaMulti);
+
+        socket.send(outputM);
+
+        System.out.println(socket.toString());
+
         double prezzoBase = risposta.getPrezzo_base();
         MonitorVincitore monitor = new MonitorVincitore(username, prezzoBase);
 
@@ -291,7 +305,8 @@ public class Client {
         // ciclo di attesa del server per far partire l'asta
         boolean astaIniziata = false;
         while (!astaIniziata) {
-            String rispostaAttesa = input.readLine(); // risposta dal server
+
+           String rispostaAttesa = input.readLine(); // risposta dal server
 
             if (rispostaAttesa != null && rispostaAttesa.equals("start_asta")) {
                 astaIniziata = true;
@@ -307,7 +322,7 @@ public class Client {
             }
         }
 
-        try (DatagramSocket socket = new DatagramSocket()) {
+
             InetAddress group = InetAddress.getByName(indirizzoMulti);
 
             System.out.print("Inserisci il valore della tua offerta: ");
@@ -319,21 +334,27 @@ public class Client {
             // Serializza in JSON con Gson
             String jsonOfferta = converter.toJson(offerta);
 
-            byte[] buffer = jsonOfferta.getBytes();
-            DatagramPacket packet = new DatagramPacket(buffer, buffer.length, group, portaMulti);
-            socket.send(packet);
+            if (!monitor.isAstaTerminata()){
+                byte[] buffer = jsonOfferta.getBytes();
+                DatagramPacket packet = new DatagramPacket(buffer, buffer.length, group, portaMulti);
+                socket.send(packet);
 
-            System.out.println("Offerta inviata!");
-        }
+                System.out.println("Offerta inviata!");
+            }
+            else System.out.println("offerta non inviata, asta termina");
+
+
 
         System.out.println("Attendo la fine dell'asta....");
-        try {
-            thread.join(); // il thread tcp si blocca finche il thread non termina
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+//        try {
+//            //thread.join(); // il thread tcp si blocca finche il thread non termina
+//
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException(e);
+//        }
 
         System.out.println("L'asta è terminata. Torno al menu principale....");
+        socket.close();
         menuDopoLogin();
     }
 
@@ -438,6 +459,9 @@ public class Client {
         if (reply.contains("erroreCreazioneAsta")) {
             System.out.println("errore nella creazione dell'asta, " +
                     "non possiedi quel prodotto o il prodotto non esiste.");
+        } else if (reply.contains("ok")) {
+            System.out.println("creazione asta andata a buon fine");
+
         }
 
     }
@@ -447,7 +471,7 @@ public class Client {
     public Thread avvioThread(String mulicastIp, int portaMulticast, MonitorVincitore monitor) {
         Thread thread = null;
         try {
-            thread = new ThreadLetturaAsta(mulicastIp, portaMulticast, monitor);
+            thread = new ThreadLetturaAstaClient(mulicastIp, portaMulticast, monitor);
             thread.start(); // Avvia il thread
         } catch (Exception e) {
             System.out.println("Errore nell'avvio del thread multicast: " + e.getMessage());
