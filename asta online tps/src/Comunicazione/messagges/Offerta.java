@@ -1,15 +1,20 @@
 package Comunicazione.messagges;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 public class Offerta {
     private String type;
 
-    private String usename;
+    private String username;
     private double importo;
+    private String data_offerta;
 
-    public Offerta(String usename, double importo) {
+    public Offerta(String username, double importo) {
         this.type = TypeOfMes.offerta.toString();
-        this.usename = usename;
+        this.username = username;
         this.importo = importo;
+        this.data_offerta = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 
     public String getType() {
@@ -25,19 +30,28 @@ public class Offerta {
     }
 
     public String getUsename() {
-        return usename;
+        return username;
     }
 
     public void setUsename(String usename) {
-        this.usename = usename;
+        this.username = usename;
+    }
+
+    public String getData_offerta() {
+        return data_offerta;
+    }
+
+    public void setData_offerta(String data_offerta) {
+        this.data_offerta = data_offerta;
     }
 
     @Override
     public String toString() {
         return "Offerta{" +
                 "type='" + type + '\'' +
-                ", usename='" + usename + '\'' +
+                ", username='" + username + '\'' +
                 ", importo=" + importo +
+                ", data_offerta='" + data_offerta + '\'' +
                 '}';
     }
 }

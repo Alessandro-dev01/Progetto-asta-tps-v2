@@ -10,5 +10,9 @@ public enum Result {
     nonAutorizzato,
     autorizzato,
     astaTerminata,
-    erroreCreazioneAsta
+    erroreCreazioneAsta,
+    notImportant,
+    prodottoNonTrovato,
+    in_attesa,
+    ok
 }

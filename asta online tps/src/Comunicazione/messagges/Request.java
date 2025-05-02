@@ -3,7 +3,12 @@ package Comunicazione.messagges;
 public class Request {
     private String type;
 
-    public Request() {}
+    public Request() {
+    }
+
+    public Request(TypeOfMes type) {
+        this.type =type.toString();
+    }
 
     public void setType(TypeOfMes type) {
         this.type = type.toString();

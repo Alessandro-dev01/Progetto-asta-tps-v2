@@ -1,36 +1,70 @@
 package Comunicazione.asta;
 
+// classe monitor utilizzata per tracciare l'attuale vincitore dell'asta
+// tiene aggiornato il nome dell'utente che ha fatto l'offerta piu alta e l'importo corrispondente
+
 public class MonitorVincitore {
-    private String username;
-    private double importo;
+    private String vincitore;
+    private double offertaMassima;
+    private boolean asta = false;
+    private long ultimaOff; // tempo ultima offerta impostato nell'istante corrente
+    private final long timeout = 15000;
 
 
-    public MonitorVincitore(String username, double importo) {
-        this.username = username;
-        this.importo = importo;
+    public MonitorVincitore(String vincitore, double prezzoBase) {
+        this.vincitore = vincitore;
+        this.offertaMassima = prezzoBase;
+        this.ultimaOff = System.currentTimeMillis();
     }
 
     public synchronized String getUsername() {
-        return username;
+        return vincitore;
     }
 
-    public synchronized void setUsername(String username) {
-        this.username = username;
+    public synchronized void setUsername(String vincitore) {
+        this.vincitore = vincitore;
     }
 
-    public synchronized double getImporto() {
-        return importo;
+    public synchronized double getOffertaMassima() {
+        return offertaMassima;
     }
 
-    public synchronized void setImporto(double importo) {
-        this.importo = importo;
+    public synchronized void setOffertaMassima(double offertaMassima) {
+        this.offertaMassima = offertaMassima;
+    }
+
+    public synchronized void terminaAsta() {
+        asta = true;
+    }
+
+    public synchronized void aggiornaOfferta(String username, double offerta) {
+        if (offerta > this.offertaMassima) {
+            this.offertaMassima = offerta;
+            this.vincitore = username;
+            this.ultimaOff = System.currentTimeMillis(); // aggiorno il tempo dell'ultima offerta
+            System.out.println("Nuova offerta! Utente: " + username + " con importo: " + offerta);
+        } else {
+            System.out.println("Offerta rifiutata: troppo bassa");
+        }
+
+    }
+
+    // Restituisce true se l'asta è terminata per timeout o se è stata esplicitamente chiusa.
+    public boolean isAstaTerminata() {
+        if (asta) {
+            return true;
+        }
+        if ((System.currentTimeMillis() - ultimaOff) > timeout) {
+            return true;
+        }
+        return false;
     }
 
     @Override
     public synchronized String toString() {
         return "dati offerta {" +
-                "fatta da='" + username + '\'' +
-                ", con prezzo base=" + importo +
+                "fatta da='" + vincitore + '\'' +
+                ", con prezzo base=" + offertaMassima +
                 '}';
     }
 }

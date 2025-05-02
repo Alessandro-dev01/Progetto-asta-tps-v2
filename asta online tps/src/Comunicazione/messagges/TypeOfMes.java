@@ -15,5 +15,9 @@ public enum TypeOfMes {
     fine_asta,
     creazione_asta,
     Asta,
-    possedutiRequest
+    possedutiRequest,
+    presenza,
+    prodottoNonTrovato,
+    attesa_partecipanti,
+    start_asta
 }

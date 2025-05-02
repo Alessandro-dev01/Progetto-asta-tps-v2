@@ -1,17 +1,16 @@
 package Comunicazione.messagges;
 
+// classe datiAsta che  rappresenta il messaggio che comunica l'inizio dell'asta
 public class DatiAsta {
     private String type;
     private int idProdotto;
 
     public DatiAsta() {
         this.type = TypeOfMes.creazione_asta.toString();
-        this.idProdotto =0;
+        this.idProdotto = 0;
     }
 
-    public String getType() {
-        return type;
-    }
+    public String getType() { return type; }
 
     public void setIdProdotto(int idProdotto) {
         this.idProdotto = idProdotto;

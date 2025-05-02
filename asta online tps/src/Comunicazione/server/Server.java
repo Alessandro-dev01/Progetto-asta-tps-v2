@@ -1,21 +1,7 @@
 package Comunicazione.server;
 
-import Comunicazione.asta.IniziallizatoreAsta;
-import Comunicazione.client.ThreadClientMulticast;
-import Comunicazione.messagges.*;
-import StrutturaOggetti.Prodotto;
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.*;
-import java.sql.*;
-import java.util.LinkedList;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -53,7 +39,7 @@ public class Server {
                 throw new RuntimeException(e);
             }
 
-            this.executorService.submit(new RunnableAsta(client, this.DB_URL, this.password, this.user));
+            this.executorService.submit(new AstaClientHandler(client, this.DB_URL, this.password, this.user));
 
 
         } while (true); // Ciclo continuo per gestire le comunicazioni

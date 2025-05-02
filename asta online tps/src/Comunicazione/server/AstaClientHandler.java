@@ -1,15 +1,11 @@
 package Comunicazione.server;
 
-import Comunicazione.asta.IniziallizatoreAsta;
-import Comunicazione.client.ThreadClientMulticast;
 import Comunicazione.messagges.*;
 import StrutturaOggetti.Prodotto;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
-import javax.sound.sampled.Port;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -18,7 +14,9 @@ import java.net.*;
 import java.sql.*;
 import java.util.LinkedList;
 
-public class RunnableAsta implements Runnable {
+// classe handler che gestisce il menu dopoLogin, la partecipazioni ad un'asta, l'inviio della creazione di un'asta
+// e della visualizzazione degli oggetti in possesso
+public class AstaClientHandler implements Runnable {
 
     private double importoFinale = 0.0;
     private String vincitore = "";
@@ -30,8 +28,7 @@ public class RunnableAsta implements Runnable {
     private PrintWriter output;
 
     // Multicast Socket per inviare messaggi
-
-    public RunnableAsta(Socket client, String DB_URL, String password, String user) {
+    public AstaClientHandler(Socket client, String DB_URL, String password, String user) {
         this.client = client;
         this.converter = new Gson();
 
@@ -62,6 +59,8 @@ public class RunnableAsta implements Runnable {
                 throw new RuntimeException(e);
             }
 
+            System.out.println(mes);
+
             // Gestisce diverse richieste ricevute dal client
             if (mes.contains("loginRequest")) {
                 loginRequest(); // Gestisce la richiesta di login
@@ -82,12 +81,12 @@ public class RunnableAsta implements Runnable {
 
     private void cercaPosseduti(String msg) {
 
-        Request res=new Request();
-        LinkedList<Prodotto> list=new LinkedList<Prodotto>();
-        String reply="",sql="";
+        Request res = new Request();
+        LinkedList<Prodotto> list = new LinkedList<Prodotto>();
+        String reply = "", sql = "";
 
 
-         sql = "SELECT id, nome, descrizione, prezzo_base, indirizzo_multicast, username, porta_multicast, nome_categoria, stato FROM prodotto WHERE username= ?";
+        sql = "SELECT id, nome, descrizione, prezzo_base, indirizzo_multicast, username, porta_multicast, nome_categoria, stato FROM prodotto WHERE username= ?";
 
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, this.username);
@@ -111,9 +110,9 @@ public class RunnableAsta implements Runnable {
             e.printStackTrace();
         }
 
-        reply=this.converter.toJson(list);
-
+        reply = this.converter.toJson(list);
         this.output.println(reply);
+
     }
 
     // Gestisce la procedura di login del client
@@ -149,7 +148,7 @@ public class RunnableAsta implements Runnable {
                 response.setEsito(Result.okLogin);
                 String logres = this.converter.toJson(response);
                 this.output.println(logres); // Risposta positiva al login
-                this.username=log.getUsername();
+                this.username = log.getUsername();
 
             } else { // Se l'utente non esiste
                 Response response = new Response();
@@ -196,96 +195,46 @@ public class RunnableAsta implements Runnable {
 
     // Gestisce la partecipazione di un client ad un'creazione_asta
     public void partecipaAsta(String msg) {
-        try {
+        vincitore = "";
 
-            long tempoMax = 60000; // Tempo massimo per l'creazione_asta (60 secondi)
-            long tempoInizio = System.currentTimeMillis();
+        System.out.println("Richiesta ricevuta: " + msg);
 
-            System.out.println("Richiesta ricevuta: " + msg);
+        PartecipazioneRequest partecipazioneRequest = this.converter.fromJson(msg, PartecipazioneRequest.class);
 
-            JsonObject jsonReq = JsonParser.parseString(msg).getAsJsonObject();
+        if (partecipazioneRequest != null && partecipazioneRequest.getType() != null && partecipazioneRequest.getType().contains("partecipa_asta")) {
+            int idProdotto = partecipazioneRequest.getId_prodotto();
+            Prodotto prodotto = visualizzaProdotto(idProdotto);
 
+            if (prodotto != null) {
+                PartecipazioneResponse partecipazioneResponse = new PartecipazioneResponse(prodotto.getIndirizzoMulticast(),
+                        prodotto.getPortaMulticast(), prodotto.getPrezzoBase());
+                String risposta = this.converter.toJson(partecipazioneResponse);
+                output.println(risposta); // Risposta con indirizzo multicast per partecipare
 
-            if (jsonReq.has("type") && jsonReq.get("type").getAsString().equals("partecipa_asta")) {
+                importoFinale = prodotto.getPrezzoBase(); // Imposta il prezzo base
 
-                int idProdotto = jsonReq.get("id_prodotto").getAsInt();
-                Prodotto prodotto = visualizzaProdotto(idProdotto);
-
-                if (prodotto != null) {
-
-                    JsonObject risposta = new JsonObject();
-                    risposta.addProperty("type", "ok");
-                    risposta.addProperty("indirizzo_multicast", prodotto.getIndirizzoMulticast());
-                    risposta.addProperty("porta_multicast", prodotto.getPortaMulticast());
-                    output.println(risposta); // Risposta con indirizzo multicast per partecipare
-
-
-
-//                    importoFinale = prodotto.getPrezzoBase(); // Imposta il prezzo base
-//                    monitoraAsta(idProdotto,tempoMax);
-//
-//                    //avvioThread(idProdotto, prodotto.getIndirizzoMulticast(), prodotto.getPortaMulticast()); // Avvio thread multicast per gestire offerte
-//
-//                    //         new Thread(() -> {
-//                    //                        monitoraAsta(idProdotto, tempoMax);
-//                    //                    }).start();
-//
-//
-//                    while (System.currentTimeMillis() - tempoInizio > tempoMax) {
-//                        String offertaRicevuta = input.readLine();
-//                        if (offertaRicevuta != null && !offertaRicevuta.isEmpty()) {
-//                            JsonObject jsOfferta = JsonParser.parseString(offertaRicevuta).getAsJsonObject();
-//                            if (jsOfferta.has("type") && jsOfferta.get("type").getAsString().equals("offerta")) {
-//                                double importo = jsOfferta.get("importo").getAsDouble();
-//                                String utente = jsOfferta.get("utente").getAsString();
-//
-//                                System.out.println(importo+" "+utente);
-//
-//                                if (importo > importoFinale) {
-//                                    importoFinale = importo; // Aggiorna l'importo finale se l'offerta è maggiore
-//                                    vincitore = utente; // Aggiorna il vincitore
-//                                    System.out.println("Nuova offerta! Utente: " + utente + " con importo: " + importo);
-//                                    try {
-//                                        aggiornamentoOfferta(importoFinale, vincitore, prodotto.getIndirizzoMulticast(), prodotto.getPortaMulticast()); // Aggiorna l'offerta
-//                                    } catch (IOException e) {
-//                                        e.printStackTrace();
-//                                    }
-//                                } else {
-//                                    System.out.println("Offerta rifiutata: troppo bassa");
-//                                }
-//                            }
-//                        }
-//                    }
-
-                    System.out.println("Asta terminata! Tempo massimo raggiunto.");
-                    fineAsta(idProdotto, vincitore, importoFinale);
-
-                } else {
-                    JsonObject rispostaErr = new JsonObject();
-                    rispostaErr.addProperty("esito", "errore");
-                    rispostaErr.addProperty("messaggio", "prodotto non trovato!");
-                    output.println(rispostaErr); // Risposta con errore se il prodotto non è trovato
-                }
+            } else {
+                RispostaErrore rispostaErrore = new RispostaErrore(Result.prodottoNonTrovato, TypeOfMes.prodottoNonTrovato, "Prodotto non trovato!");
+                String rispostaJs = this.converter.toJson(rispostaErrore);
+                output.println(rispostaJs);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
-    public void creazioneAsta(String mes){
+    public void creazioneAsta(String mes) {
 
-        DatiAsta daR=this.converter.fromJson(mes,DatiAsta.class);
+        DatiAsta daR = this.converter.fromJson(mes, DatiAsta.class);
 
-      String sql = "SELECT id, nome, descrizione, prezzo_base,indirizzo_multicast, username, porta_multicast, nome_categoria, stato FROM prodotto WHERE username= ? AND id=?";
+        String sql = "SELECT id, nome, descrizione, prezzo_base, indirizzo_multicast, username, porta_multicast, nome_categoria, stato FROM prodotto WHERE username= ? AND id=?";
 
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, this.username);
-            ps.setInt(2,daR.getIdProdotto());
+            ps.setInt(2, daR.getIdProdotto());
 
             try (ResultSet rs = ps.executeQuery()) {
                 //controllo se quell'oggetto appartiene allo user che il thread sta gestende
-               if (rs.next()) {
-                    Prodotto p=new Prodotto(
+                if (rs.next()) {
+                    Prodotto p = new Prodotto(
                             rs.getInt("id"),
                             rs.getString("stato"),
                             rs.getString("nome_categoria"),
@@ -297,27 +246,25 @@ public class RunnableAsta implements Runnable {
                             rs.getString("nome")
                     );
 
-                    String prodJson=this.converter.toJson(p);
+                    String prodJson = this.converter.toJson(p);
 
-                    Socket sAsta=new Socket(InetAddress.getByName("127.0.0.1"),4000);
+                    Socket sAsta = new Socket(InetAddress.getByName("127.0.0.1"), 4000);
 
-                  PrintWriter outputAsta=new PrintWriter(sAsta.getOutputStream(),true);
+                    PrintWriter outputAsta = new PrintWriter(sAsta.getOutputStream(), true);
 
-                  outputAsta.println(prodJson);
+                    outputAsta.println(prodJson);
 
-                   System.out.println("ho inviato il messaggio");
+
+                } else {
+                    Response r = new Response();
+                    r.setType(TypeOfMes.Asta);
+                    r.setEsito(Result.erroreCreazioneAsta);
+
+                    String jsonRes = this.converter.toJson(r);
+
+                    this.output.println(jsonRes);
 
                 }
-               else {
-                   Response r=new Response();
-                   r.setType(TypeOfMes.Asta);
-                   r.setEsito(Result.erroreCreazioneAsta);
-
-                   String jsonRes=this.converter.toJson(r);
-
-                   this.output.println(jsonRes);
-
-               }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -325,32 +272,8 @@ public class RunnableAsta implements Runnable {
             e.printStackTrace();
         }
 
-
     }
 
-
-    public void avvioThread(int idProdotto, String indirizzoMulticast, int portaMulticast) {
-        try {
-           // this.thread = new ThreadClientMulticast(idProdotto, indirizzoMulticast, portaMulticast);
-            //thread.start(); // Avvia il thread
-        } catch (Exception e) {
-            System.out.println("Errore nell'avvio del thread multicast: " + e.getMessage());
-        }
-    }
-
-    // Gestisce l'aggiornamento dell'offerta
-    public void aggiornamentoOfferta(double importo, String username, String indirizzoMulticast, int portaMulticast) throws IOException {
-        JsonObject offerta = new JsonObject();
-        offerta.addProperty("type", "nuova_offerta");
-        offerta.addProperty("utente", username);
-        offerta.addProperty("importo", importo);
-
-        // Gestione multicast per inviare l'offerta a tutti i partecipanti
-        byte[] buffer = offerta.toString().getBytes();
-        InetAddress multicastIp = InetAddress.getByName(indirizzoMulticast);
-        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, multicastIp, portaMulticast);
-        //multicastSocket.send(packet); // Invia il pacchetto multicast
-    }
 
     // Carica le informazioni di un prodotto dal database dato l'ID
     public Prodotto visualizzaProdotto(int idProdotto) {
@@ -391,6 +314,7 @@ public class RunnableAsta implements Runnable {
             JsonArray prodottoCat = new JsonArray();
             String categoriaCorr = "";
 
+
             while (rs.next()) {
 
                 String categoria = rs.getString("nome_categoria");
@@ -422,54 +346,12 @@ public class RunnableAsta implements Runnable {
             if (!categoriaCorr.equals("")) {
                 prodottiPerCat.add(categoriaCorr, prodottoCat);
             }
-
             ris.add("prodotti", prodottiPerCat);
             output.println(ris);
-
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    // Monitora il tempo dell'creazione_asta
-    public void monitoraAsta(int idProdotto, long tempoMax) {
-        long tempoInizio = System.currentTimeMillis();
-        long tempoFine = tempoInizio + tempoMax;
-
-        while (System.currentTimeMillis() < tempoFine) {
-            // Continua l'creazione_asta
-            try {
-                Thread.sleep(1000); // Riduce il carico sul processore
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        try {
-            fineAsta(idProdotto, vincitore, importoFinale); // Chiama la fine dell'creazione_asta
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    // Gestisce la fine dell'creazione_asta
-    public void fineAsta(int idProdotto, String vincitore, double importoFinale) throws IOException {
-        JsonObject fineAsta = new JsonObject();
-        fineAsta.addProperty("type", "fine_asta");
-        fineAsta.addProperty("id_prodotto", idProdotto);
-        fineAsta.addProperty("vincitore", vincitore);
-        fineAsta.addProperty("importo_finale", importoFinale);
-
-        Prodotto prodotto = visualizzaProdotto(idProdotto);
-
-        String indirizzoMulticast = prodotto.getIndirizzoMulticast();
-        int portaMulticast = prodotto.getPortaMulticast();
-
-        byte[] buffer = fineAsta.toString().getBytes();
-        InetAddress multicastAdd = InetAddress.getByName(indirizzoMulticast);
-        DatagramPacket packet = new DatagramPacket(buffer, buffer.length, multicastAdd, portaMulticast);
-
-        //multicastSocket.send(packet); // Invia il pacchetto multicast che segnala la fine dell'creazione_asta
-    }
 
 }

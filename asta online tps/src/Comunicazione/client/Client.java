@@ -1,5 +1,7 @@
 package Comunicazione.client;
 
+import Comunicazione.asta.MonitorVincitore;
+import Comunicazione.asta.ThreadLetturaAsta;
 import Comunicazione.messagges.*;
 import Comunicazione.messagges.dataUser;
 import StrutturaOggetti.Prodotto;
@@ -11,10 +13,10 @@ import com.google.gson.reflect.TypeToken;
 
 import java.io.*;
 import java.lang.reflect.Type;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Scanner;
@@ -23,9 +25,9 @@ public class Client {
 
     private String username;
     private Socket connSer;
-    private HashMap<Integer,Prodotto> prodotti;
+    private HashMap<Integer, Prodotto> prodotti;
     private Socket clientTcp;
-    private ThreadClientMulticast th;
+    private ThreadLetturaAsta th;
     private BufferedReader input;
     private PrintWriter output;
     private Gson converter;
@@ -141,7 +143,7 @@ public class Client {
 
                     } else if (reply.contains("okLogin")) {
                         System.out.println("Login riuscito!");
-                        this.username=username;
+                        this.username = username;
                         menuDopoLogin();
                     }
                     break;
@@ -159,7 +161,7 @@ public class Client {
                     "Inserisci una delle seguenti opzioni:\n" +
                             "1) Visualizza oggetti in tuo possesso \n" +
                             "2) Visualizza oggetti in asta\n" +
-                            "3) crea un'asta\n"+
+                            "3) crea un'asta\n" +
                             "4) Esci"
             );
             menu = scanner.nextInt();
@@ -173,7 +175,7 @@ public class Client {
                 case 2:
                     visualizzaOggettiInAsta();
                     break;
-                case 3:{
+                case 3: {
                     inizializzaAsta();
                     break;
                 }
@@ -188,33 +190,32 @@ public class Client {
     }
 
     private void visualizzaOggettiInPossesso(String username) {
-       Request r=new Request();
+        Request r = new Request();
 
-       r.setType(TypeOfMes.possedutiRequest);
+        r.setType(TypeOfMes.possedutiRequest);
 
-       String rJ=this.converter.toJson(r);
+        String rJ = this.converter.toJson(r);
 
-       this.output.println(rJ);
+        this.output.println(rJ);
 
-        String msg="";
+        String msg = "";
         try {
-           msg=this.input.readLine();
+            msg = this.input.readLine();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
-        Type listType=new TypeToken<LinkedList<Prodotto>>(){}.getType();
+        Type listType = new TypeToken<LinkedList<Prodotto>>() {
+        }.getType();
 
-        LinkedList<Prodotto> result=this.converter.fromJson(msg,listType);
+        LinkedList<Prodotto> result = this.converter.fromJson(msg, listType);
 
-        if (!result.isEmpty()){
+        if (!result.isEmpty()) {
             System.out.println(result.toString());
-        }
-        else System.out.println("non possedi nessun oggetto");
+        } else System.out.println("non possedi nessun oggetto");
 
 
     }
-
 
     private void registrazione() {
         String password = "", mes = "", reply = "", username;
@@ -253,58 +254,87 @@ public class Client {
         } while (true);
     }
 
-    // Metodo per far partecipare ad un'creazione_asta dopo il login
+    // Metodo per far partecipare ad un'asta dopo il login
     public void partecipaAsta(int idProdotto) throws IOException {
         Scanner scanner = new Scanner(System.in);
 
         // Manda richiesta di partecipazione
-        String richiesta = creaRichiestaPartecipazione(idProdotto);
-        output.println(richiesta);
+        PartecipazioneRequest richiesta = new PartecipazioneRequest(idProdotto);
+        String jsonRichiesta = converter.toJson(richiesta); // Serializza l'oggetto in JSON
+        output.println(jsonRichiesta);
 
-        String req = input.readLine();
+        System.out.println("ho inviato il messaggio");
 
-        JsonObject jsonReq = JsonParser.parseString(req).getAsJsonObject();
-
-        if (jsonReq.get("type").getAsString().equals("ok")) {
-            String indirizzoMulti = jsonReq.get("indirizzo_multicast").getAsString();
-            int portaMulti = jsonReq.get("porta_multicast").getAsInt();
-
-            avvioThread(idProdotto, indirizzoMulti, portaMulti); // Avvia il thread multicast per ricevere offerte
-
-            System.out.println("stai partecipando all'creazione_asta!");
+        // Riceve la risposta dal server
+        String rispostaServer = input.readLine();
+        System.out.println("ricevuto il messaggio");
+        PartecipazioneResponse risposta = converter.fromJson(rispostaServer, PartecipazioneResponse.class);
+        System.out.println("ho convertito");
 
 
+        // Verifica che la risposta del server sia positiva
+        if (!"partecipa_asta".equals(risposta.getType()) || risposta.getPorta_multicast() == 0) {
+            System.out.println("Impossibile partecipare all'asta.");
+            return;
+        }
 
+        String indirizzoMulti = risposta.getIndirizzo_multicast();
+        int portaMulti = risposta.getPorta_multicast();
 
+        double prezzoBase = risposta.getPrezzo_base();
+        MonitorVincitore monitor = new MonitorVincitore(username, prezzoBase);
 
+        Thread thread = avvioThread(indirizzoMulti, portaMulti, monitor);
 
+        System.out.println("Stai partecipando all'asta! Attendi che vengano raggiunti i partecipanti minimi...");
 
+        // ciclo di attesa del server per far partire l'asta
+        boolean astaIniziata = false;
+        while (!astaIniziata) {
+            String rispostaAttesa = input.readLine(); // risposta dal server
 
+            if (rispostaAttesa != null && rispostaAttesa.equals("start_asta")) {
+                astaIniziata = true;
+                System.out.println("L'asta è iniziata! Puoi fare la tua offerta.");
+            } else {
+                System.out.println("In attesa di altri partecipanti per avviare l'asta...");
+                // Attendi qualche secondo prima di riprovare
+                try {
+                    Thread.sleep(2000); // 2 secondi di attesa perno sovraccaricare il server
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
 
-//            while (true) {
-//                System.out.println("Inserisci l'importo della tua offerta. Oppure digita 'esci' per tornare al menu");
-//
-//                String input = scanner.nextLine();
-//
-//                if (input.equals("esci")) {
-//                    break;
-//                }
-//
-//                try {
-//                    double importo = Double.parseDouble(input);
-//
-//                    String offerta = creaOfferta(username, importo, idProdotto);
-//                    output.println(offerta);
-//
-//                    System.out.println("Offerta inviata correttamente!");
-//                } catch (NumberFormatException e) {
-//                    System.out.println("Importo non valido. Riprova.");
-//                }
-//            }
-       } else {
-          System.out.println("Errore nella partecipazione all'creazione_asta: " + jsonReq.get("messaggio").getAsString());
-      }
+        try (DatagramSocket socket = new DatagramSocket()) {
+            InetAddress group = InetAddress.getByName(indirizzoMulti);
 
+            System.out.print("Inserisci il valore della tua offerta: ");
+            double valore = scanner.nextDouble();
+            scanner.nextLine(); // flush newline
+
+            Offerta offerta = new Offerta(username, valore);
+
+            // Serializza in JSON con Gson
+            String jsonOfferta = converter.toJson(offerta);
+
+            byte[] buffer = jsonOfferta.getBytes();
+            DatagramPacket packet = new DatagramPacket(buffer, buffer.length, group, portaMulti);
+            socket.send(packet);
+
+            System.out.println("Offerta inviata!");
+        }
+
+        System.out.println("Attendo la fine dell'asta....");
+        try {
+            thread.join(); // il thread tcp si blocca finche il thread non termina
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        System.out.println("L'asta è terminata. Torno al menu principale....");
+        menuDopoLogin();
     }
 
     public void visualizzaOggettiInAsta() throws IOException {
@@ -359,80 +389,70 @@ public class Client {
                 boolean valido = false;
 
                 while (!valido) {
-                    System.out.println("Per partecipare ad un'creazione_asta inserisci l'ID del determinato prodotto: ");
-                    if (scanner.hasNextInt()) {
-                        idProdotto = scanner.nextInt();
+                    System.out.println("Per partecipare ad un'asta inserisci l'ID del determinato prodotto, altrimenti digita 'esci' per tornare al menu principale");
 
+                    String inputUtente = scanner.nextLine().trim();
+
+                    if (inputUtente.equalsIgnoreCase("esci")) {
+                        menuDopoLogin();
+                        return;
+                    }
+
+                    try {
+                        idProdotto = Integer.parseInt(inputUtente);
                         if (idProdotto < 0 || !listaIdProdotti.contains(idProdotto)) {
                             System.out.println("Prodotto inesistente, riprova.");
                         } else {
                             valido = true;
                         }
+                    } catch (NumberFormatException e) {
+                        System.out.println("Input non valido, riprova.");
                     }
-                }
 
+                }
                 partecipaAsta(idProdotto);
             }
+
         } catch (IOException e) {
             throw new RuntimeException();
         }
     }
 
     private void inizializzaAsta() {
-        Scanner scanner=new Scanner(System.in);
-        DatiAsta da=new DatiAsta();
+        Scanner scanner = new Scanner(System.in);
+        DatiAsta da = new DatiAsta();
 
         System.out.println("inserisci l'id del prodotto");
         da.setIdProdotto(scanner.nextInt());
 
-
-        String reqJ=this.converter.toJson(da,DatiAsta.class);
-        String reply="", id="";
+        String reqJ = this.converter.toJson(da, DatiAsta.class);
+        String reply = "", id = "";
         this.output.println(reqJ);
 
         try {
-            reply=this.input.readLine();
+            reply = this.input.readLine();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
-        if (reply.contains("erroreCreazioneAsta")){
+        if (reply.contains("erroreCreazioneAsta")) {
             System.out.println("errore nella creazione dell'asta, " +
-                    "non possiedi quel prodotto o il proddotto non è presente");
+                    "non possiedi quel prodotto o il prodotto non esiste.");
         }
 
-    }
-
-    // Crea messaggio JSON per la partecipazione all'creazione_asta
-    public String creaRichiestaPartecipazione(int idProdotto) {
-        JsonObject req = new JsonObject();
-        req.addProperty("type", "partecipa_asta");
-        req.addProperty("id_prodotto", idProdotto); // ID del prodotto
-
-        return this.converter.toJson(req); // Serializza la richiesta in JSON
-    }
-
-    // Crea messaggio JSON per l'invio di un'offerta
-    public String creaOfferta(String username, double importo, int idProdotto) {
-        JsonObject offerta = new JsonObject();
-        offerta.addProperty("type", "offerta");
-        offerta.addProperty("utente", username); // Nome utente
-        offerta.addProperty("id_prodotto", idProdotto); // ID del prodotto
-        offerta.addProperty("importo", importo); // Importo offerto
-
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-        offerta.addProperty("timestamp", timestamp);
-        return this.converter.toJson(offerta); // Serializza l'offerta in JSON
     }
 
     // Avvia il thread multicast per ricevere offerte in tempo reale
-    public void avvioThread(int idProdotto, String mulicastIp, int portaMulticast) {
+    // ritorna un thread cosi da eseguire le operazioni nel thread chiamante
+    public Thread avvioThread(String mulicastIp, int portaMulticast, MonitorVincitore monitor) {
+        Thread thread = null;
         try {
-            this.th = new ThreadClientMulticast(idProdotto, mulicastIp, portaMulticast);
-            th.start(); // Avvia il thread
+            thread = new ThreadLetturaAsta(mulicastIp, portaMulticast, monitor);
+            thread.start(); // Avvia il thread
         } catch (Exception e) {
             System.out.println("Errore nell'avvio del thread multicast: " + e.getMessage());
         }
+        return thread;
     }
 
     public static void main(String[] args) throws IOException {

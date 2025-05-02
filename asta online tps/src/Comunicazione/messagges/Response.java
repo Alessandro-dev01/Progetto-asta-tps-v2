@@ -1,14 +1,17 @@
 package Comunicazione.messagges;
 
+
 public class Response {
     private String type;
     private String esito;
 
     public Response() {
-        this.type= TypeOfMes.loginResponse.toString();
-        this.esito= Result.erroreLogin.toString();
     }
 
+    public Response(Result result, TypeOfMes type) {
+        this.type = type.toString();
+        this.esito = result.toString();
+    }
 
     public String getType() {
         return type;
