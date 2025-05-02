@@ -42,8 +42,6 @@ public class GestoreAstaNoInput implements Runnable {
     @Override
     public void run() {
 
-
-
         if (this.prod == null) {
             System.err.println("Prodotto risultante dalla conversione è null");
             return;
@@ -71,9 +69,6 @@ public class GestoreAstaNoInput implements Runnable {
                 DatagramPacket receivePacket = new DatagramPacket(buffer, buffer.length);
                 System.out.println(partecipanti.size()+" "+partecipanti.toString());
                 multicastSocket.receive(receivePacket);
-
-
-
 
                 String messaggio = new String(receivePacket.getData(), 0, receivePacket.getLength());
 

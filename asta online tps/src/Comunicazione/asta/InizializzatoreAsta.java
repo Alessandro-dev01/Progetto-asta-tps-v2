@@ -22,9 +22,12 @@ public class InizializzatoreAsta {
 
     private ExecutorService executorService;
     private ServerSocket serverAsta;
+    private threadIniAsta Iniaste;
 
 
     public InizializzatoreAsta() {
+        this.Iniaste=new threadIniAsta();
+        this.Iniaste.start();
         this.executorService = Executors.newCachedThreadPool();
         try {
             serverAsta = new ServerSocket(4000);
@@ -43,8 +46,6 @@ public class InizializzatoreAsta {
     public void avvioServerAsta() {
         Socket richiedenteAsta;
 
-        creaAste();
-
         while (true) {
             try {
                 richiedenteAsta = this.serverAsta.accept();
@@ -59,43 +60,6 @@ public class InizializzatoreAsta {
             System.out.println("ho creato il task");
         }
     }
-
-    public void creaAste(){
-
-
-
-        String query="SELECT * FROM prodotto WHERE stato='in_asta' OR stato='non_venduto'";
-
-        try {
-            Statement stm=this.con.createStatement();
-           ResultSet res=stm.executeQuery(query);
-
-            while (res.next()){
-
-                Prodotto p=new Prodotto(
-                        res.getInt("id"),
-                        res.getString("stato"),
-                        res.getString("nome_categoria"),
-                        res.getInt("porta_multicast"),
-                        res.getString("username"),
-                        res.getString("indirizzo_multicast"),
-                        res.getDouble("prezzo_base"),
-                        res.getString("descrizione"),
-                        res.getString("nome")
-                );
-
-                this.executorService.submit(new GestoreAstaNoInput(this.DB_URL,this.password,this.user,p));
-            }
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
-
-
-
-    }
-
 
     public static void main(String[] args) {
         InizializzatoreAsta i = new InizializzatoreAsta();
